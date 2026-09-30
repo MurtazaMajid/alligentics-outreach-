@@ -85,6 +85,7 @@ async function sendNewMessage(request, env) {
     to,
     subject,
     text: message,
+    html: textToEmailHtml(message),
   });
 
   const conversationId = await upsertConversation(env, to, subject);
@@ -122,6 +123,7 @@ async function replyToConversation(id, request, env) {
     to: conversation.contact_email,
     subject,
     text: message,
+    html: textToEmailHtml(message),
   });
 
   await insertMessage(env, {
@@ -228,6 +230,7 @@ async function sendViaMailgun(env, payload) {
   form.set('to', payload.to);
   form.set('subject', payload.subject);
   form.set('text', payload.text);
+  if (payload.html) form.set('html', payload.html);
 
   const authorization = 'Basic ' + btoa(`api:${env.MAILGUN_API_KEY}`);
   const response = await fetch(`${base}/v3/${env.MAILGUN_DOMAIN}/messages`, {
@@ -328,6 +331,21 @@ function formatFrom(sender) {
   return `${sender.name} <${sender.email}>`;
 }
 
+function textToEmailHtml(text) {
+  const safe = String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#ffffff;color:#17212b;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:680px;margin:0 auto;padding:24px;font-size:16px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;">${safe}</div>
+  </body>
+</html>`;
+}
+
 function makeReplySubject(subject) {
   return /^re:/i.test(subject) ? subject : `Re: ${subject}`;
 }
@@ -386,7 +404,8 @@ function renderApp() {
         <label>Sender</label><select id="sender"></select>
         <label>Customer email</label><input id="to" type="email" placeholder="name@company.com" />
         <label>Subject</label><input id="subject" placeholder="Quick question" />
-        <label>Message</label><textarea id="message" placeholder="Write your outreach message..."></textarea>
+        <label>Message</label><textarea id="message" placeholder="Write your outreach message...&#10;&#10;Blank lines and paragraph spacing are preserved in the email."></textarea>
+        <div class="small" style="margin-top:7px">Tip: press Enter twice between paragraphs. Your spacing will be preserved in the delivered email.</div>
         <div style="margin-top:12px"><button id="sendBtn">Send email</button></div>
         <div id="sendStatus" class="status"></div>
       </section>

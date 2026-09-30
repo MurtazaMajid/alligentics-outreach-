@@ -1,0 +1,15 @@
+name = "alligentics-outreach"
+main = "src/index.js"
+compatibility_date = "2026-09-30"
+
+[vars]
+MAILGUN_DOMAIN = "alligentics.com"
+MAILGUN_BASE_URL = "https://api.mailgun.net"
+# Configure sender identities in Cloudflare as a secret/variable named SENDER_IDENTITIES.
+# Example JSON:
+# {"sarah":{"name":"Sarah","email":"sarah@alligentics.com"},"murtaza":{"name":"Murtaza","email":"murtaza@alligentics.com"}}
+
+[[d1_databases]]
+binding = "DB"
+database_name = "alligentics-outreach"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"

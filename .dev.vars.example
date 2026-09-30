@@ -1,0 +1,3 @@
+MAILGUN_API_KEY=replace_me
+MAILGUN_WEBHOOK_SIGNING_KEY=replace_me
+SENDER_IDENTITIES={"sarah":{"name":"Sarah","email":"sarah@alligentics.com"}}

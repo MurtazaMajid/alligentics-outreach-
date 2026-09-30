@@ -9,7 +9,8 @@ MAILGUN_BASE_URL = "https://api.mailgun.net"
 # Example JSON:
 # {"sarah":{"name":"Sarah","email":"sarah@alligentics.com"},"murtaza":{"name":"Murtaza","email":"murtaza@alligentics.com"}}
 
+
 [[d1_databases]]
 binding = "DB"
 database_name = "alligentics-outreach"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "d5464871-6e38-4348-affb-c30335042fd3"

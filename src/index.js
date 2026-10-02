@@ -230,6 +230,7 @@ async function sendViaMailgun(env, payload) {
   form.set('to', payload.to);
   form.set('subject', payload.subject);
   form.set('text', payload.text);
+  form.set('h:Reply-To', 'replies@alligentics.com');
   if (payload.html) form.set('html', payload.html);
 
   const authorization = 'Basic ' + btoa(`api:${env.MAILGUN_API_KEY}`);
@@ -328,7 +329,7 @@ function extractEmail(value) {
 }
 
 function formatFrom(sender) {
-  return `${sender.name} <${sender.email}>`;
+  return `Alligentics <${sender.email}>`;
 }
 
 function textToEmailHtml(text) {
@@ -390,7 +391,7 @@ function renderApp() {
     .shell{max-width:1440px;margin:0 auto;padding:30px 22px 60px;overflow-x:hidden}.brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#04202b;font-weight:900}.tag{color:var(--muted);margin-top:3px}
     .grid{display:grid;grid-template-columns:minmax(340px,400px) minmax(0,1fr);gap:18px;align-items:start}.card{min-width:0;background:rgba(11,35,52,.94);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.18)}h1,h2{margin:0 0 12px}h1{font-size:24px}h2{font-size:18px}.full{grid-column:1/-1}
     label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}input,textarea,select,button{width:100%;min-width:0;font:inherit;border-radius:11px}input,textarea,select{background:#071d2a;color:var(--text);border:1px solid #25516a;padding:11px 12px;outline:none}textarea{resize:vertical;min-height:150px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}#message{min-height:280px}#reply{min-height:180px}input:focus,textarea:focus,select:focus{border-color:var(--accent)}button{border:0;padding:11px 14px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#03202a;font-weight:800;cursor:pointer}button.secondary{background:#102f42;color:var(--text);border:1px solid #29566c}.toolbar{display:flex;gap:10px;align-items:center;min-width:0}.toolbar h2{min-width:0}.toolbar button{width:auto;flex:0 0 auto}.status{font-size:13px;margin-top:10px;white-space:pre-wrap;color:var(--muted)}.error{color:var(--danger)}
-    .list{border-top:1px solid var(--line);margin-top:10px;min-width:0}.item{min-width:0;padding:14px 8px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:10px}.item:hover{background:#0d293c}.email{font-weight:800;overflow-wrap:anywhere}.subject{margin-top:5px;overflow-wrap:anywhere}.preview{color:var(--muted);font-size:13px;line-height:1.45;margin-top:6px;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}.badge{display:inline-block;font-size:11px;padding:3px 7px;border-radius:999px;background:#113a49;color:#bdf7ef;margin-left:6px;vertical-align:middle}.message{min-width:0;border:1px solid var(--line);background:#071d2a;border-radius:13px;padding:14px;margin:10px 0}.message.inbound{border-left:3px solid var(--accent2)}.message.outbound{border-left:3px solid var(--accent)}.message .meta{font-size:12px;color:var(--muted);margin-bottom:8px;overflow-wrap:anywhere}.message .body{white-space:pre-wrap;line-height:1.6;overflow-wrap:anywhere}.empty{color:var(--muted);padding:14px 0}.small{font-size:12px;color:var(--muted)}
+    .list{border-top:1px solid var(--line);margin-top:10px;min-width:0}.item{min-width:0;padding:14px 8px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:10px}.item:hover{background:#0d293c}.email{font-weight:800;overflow-wrap:anywhere}.subject{margin-top:5px;overflow-wrap:anywhere}.preview{color:var(--muted);font-size:13px;line-height:1.45;margin-top:6px;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}.badge{display:inline-block;font-size:11px;padding:3px 7px;border-radius:999px;background:#113a49;color:#bdf7ef;margin-left:6px;vertical-align:middle}.message{min-width:0;border:1px solid var(--line);background:#071d2a;border-radius:13px;padding:15px;margin:12px 0}.message.inbound{border-left:3px solid var(--accent2)}.message.outbound{border-left:3px solid var(--accent)}.message .meta{font-size:12px;color:var(--muted);margin-bottom:8px;overflow-wrap:anywhere}.message .body{white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere}.messageHead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}.messageRole{font-weight:800}.messageTime{font-size:11px;color:var(--muted);white-space:nowrap}.replyInline{width:auto;margin-top:12px;padding:7px 10px;font-size:12px;background:#102f42;color:var(--text);border:1px solid #29566c}.replyBox{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}.empty{color:var(--muted);padding:14px 0}.small{font-size:12px;color:var(--muted)}
     @media(max-width:900px){.shell{padding:22px 14px 48px}.grid{grid-template-columns:1fr}.full{grid-column:auto}#message{min-height:220px}.card[style*="position:sticky"]{position:static!important}}
   </style>
 </head>
@@ -411,17 +412,29 @@ function renderApp() {
       </section>
 
       <section class="card">
-        <div class="toolbar" style="justify-content:space-between"><h2>Conversations</h2><button class="secondary" id="refreshBtn">Refresh</button></div>
+        <div class="toolbar" style="justify-content:space-between"><div><h2 style="margin-bottom:4px">Conversations</h2><div class="small">Full email threads, including customer replies.</div></div><button class="secondary" id="refreshBtn">Refresh</button></div>
         <div id="conversations" class="list"><div class="empty">Loading...</div></div>
       </section>
 
       <section id="threadCard" class="card full" hidden>
-        <h2 id="threadTitle">Conversation</h2>
+        <div class="toolbar" style="justify-content:space-between">
+          <div>
+            <h2 id="threadTitle">Conversation</h2>
+            <div id="threadSubtitle" class="small">Messages appear here in chronological order.</div>
+          </div>
+          <button class="secondary" id="threadRefreshBtn">Refresh thread</button>
+        </div>
         <div id="thread"></div>
-        <label>Reply from selected sender</label>
-        <textarea id="reply" placeholder="Write a reply..."></textarea>
-        <div style="margin-top:12px"><button id="replyBtn">Send reply</button></div>
-        <div id="replyStatus" class="status"></div>
+        <div class="replyBox">
+          <label>Reply</label>
+          <div class="small" style="margin-bottom:7px">The customer will receive this from Alligentics. Replies to your outreach are automatically routed back into this thread.</div>
+          <textarea id="reply" placeholder="Write your reply..."></textarea>
+          <div class="toolbar" style="margin-top:12px">
+            <button id="replyBtn">Send reply</button>
+            <button class="secondary" id="replyClearBtn">Clear</button>
+          </div>
+          <div id="replyStatus" class="status"></div>
+        </div>
       </section>
     </div>
     <p class="small" style="margin-top:18px">Prototype note: add authentication before using this as a publicly reachable production inbox.</p>
@@ -432,7 +445,9 @@ const $ = (id) => document.getElementById(id);
 
 $('sendBtn').addEventListener('click', sendMessage);
 $('replyBtn').addEventListener('click', sendReply);
+$('replyClearBtn').addEventListener('click', () => { $('reply').value = ''; $('replyStatus').textContent = ''; });
 $('refreshBtn').addEventListener('click', loadConversations);
+$('threadRefreshBtn').addEventListener('click', () => currentConversationId && openConversation(currentConversationId));
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -499,14 +514,24 @@ async function openConversation(id) {
   $('thread').innerHTML = '<div class="empty">Loading...</div>';
   try {
     const data = await api('/api/conversations/' + id);
-    $('threadTitle').textContent = data.conversation.contact_email + ' · ' + (data.conversation.subject || '(no subject)');
-    $('thread').innerHTML = data.messages.length ? data.messages.map(m =>
-      '<div class="message ' + escapeHtml(m.direction) + '">' +
-      '<div class="meta">' + escapeHtml(m.direction) + ' · ' + escapeHtml(m.sender_email) + ' → ' + escapeHtml(m.recipient_email) + ' · ' + escapeHtml(m.created_at || '') + '</div>' +
-      '<div><strong>' + escapeHtml(m.subject || '') + '</strong></div>' +
-      '<div class="body">' + escapeHtml(m.body_text || '') + '</div>' +
-      '</div>'
-    ).join('') : '<div class="empty">No messages.</div>';
+    $('threadTitle').textContent = data.conversation.contact_email;
+    $('threadSubtitle').textContent = (data.conversation.subject || '(no subject)') + ' · ' + data.messages.length + ' message' + (data.messages.length === 1 ? '' : 's');
+    $('thread').innerHTML = data.messages.length ? data.messages.map(m => {
+      const inbound = m.direction === 'inbound';
+      const role = inbound ? 'Customer' : 'Alligentics';
+      const replyButton = inbound ? '<button class="replyInline" data-reply-message="' + escapeHtml(m.id) + '">Reply to this</button>' : '';
+      return '<div class="message ' + escapeHtml(m.direction) + '">' +
+        '<div class="messageHead"><div class="messageRole">' + role + '</div><div class="messageTime">' + escapeHtml(m.created_at || '') + '</div></div>' +
+        '<div class="meta">' + escapeHtml(m.sender_email) + ' → ' + escapeHtml(m.recipient_email) + '</div>' +
+        '<div><strong>' + escapeHtml(m.subject || '') + '</strong></div>' +
+        '<div class="body">' + escapeHtml(m.body_text || '') + '</div>' +
+        replyButton +
+        '</div>';
+    }).join('') : '<div class="empty">No messages.</div>';
+    document.querySelectorAll('.replyInline').forEach(btn => btn.addEventListener('click', () => {
+      $('reply').focus();
+      $('reply').scrollIntoView({behavior:'smooth', block:'center'});
+    }));
     $('threadCard').scrollIntoView({behavior:'smooth', block:'start'});
   } catch (e) {
     $('thread').innerHTML = '<div class="empty error">' + escapeHtml(e.message) + '</div>';
@@ -539,6 +564,8 @@ function escapeHtml(value) {
 
 loadSenders();
 loadConversations();
+setInterval(loadConversations, 15000);
+setInterval(() => { if (currentConversationId && !$('threadCard').hidden) openConversation(currentConversationId); }, 15000);
 </script>
 </body>
 </html>`;

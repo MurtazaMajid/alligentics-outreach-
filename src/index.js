@@ -18,6 +18,10 @@ export default {
         return json(Object.entries(senders).map(([id, value]) => ({ id, ...value })));
       }
 
+      if (request.method === 'GET' && url.pathname === '/api/templates') {
+        return json(getTemplates());
+      }
+
       if (request.method === 'POST' && url.pathname === '/api/send') {
         return await sendNewMessage(request, env);
       }
@@ -47,6 +51,25 @@ export default {
     }
   },
 };
+
+const OUTREACH_TEMPLATES = [
+  {id:"restaurant-general",business_type:"restaurant",name:"Restaurant · Customer communication",subject:"Quick idea for {{business_name}}",body:"Hi {{contact_name}},\n\nI came across {{business_name}} and wanted to reach out with a quick idea.\n\nWe help restaurants automate repetitive customer communication, particularly around reservation requests, common questions, follow-ups, and order-related inquiries.\n\nI noticed there may be a few areas where automation could save your team some time without changing how your staff already works.\n\nWould you be open to a quick conversation?\n\nBest,\nAlligentics\nalligentics.com",variables:["business_name","contact_name","city"]},
+  {id:"salon-bookings",business_type:"salon",name:"Salon · Booking & follow-up",subject:"Quick idea for {{business_name}}",body:"Hi {{contact_name}},\n\nI came across {{business_name}} and had a quick idea around customer bookings and follow-ups.\n\nWe help salons automate routine inquiries, appointment requests, reminders, and follow-ups so staff spend less time handling repetitive messages.\n\nThere may be a few simple parts of the booking journey that could be automated without changing the experience for your clients.\n\nWould you be open to a quick conversation?\n\nBest,\nAlligentics\nalligentics.com",variables:["business_name","contact_name","city"]},
+  {id:"plumber-leads",business_type:"plumber",name:"Plumber · Lead capture & scheduling",subject:"Quick idea for {{business_name}}",body:"Hi {{contact_name}},\n\nI came across {{business_name}} and wanted to share a quick idea.\n\nFor plumbing businesses, a lot of time can go into responding to new inquiries, collecting job details, following up on leads, and arranging appointments.\n\nWe help businesses automate suitable parts of that process so new inquiries can be handled faster while your team stays in control.\n\nWould you be open to a quick conversation?\n\nBest,\nAlligentics\nalligentics.com",variables:["business_name","contact_name","city","service"]},
+  {id:"hvac-service",business_type:"hvac",name:"HVAC · Service requests & scheduling",subject:"Quick idea for {{business_name}}",body:"Hi {{contact_name}},\n\nI came across {{business_name}} and wanted to reach out with a quick idea.\n\nHVAC teams often spend time handling service inquiries, collecting customer details, sending follow-ups, and arranging appointments.\n\nWe help automate suitable parts of those workflows so your team can spend more time on the actual service work.\n\nWould you be open to a quick conversation?\n\nBest,\nAlligentics\nalligentics.com",variables:["business_name","contact_name","city","service"]},
+  {id:"clinic-appointments",business_type:"clinic",name:"Clinic · Appointment inquiries",subject:"Quick idea for {{business_name}}",body:"Hi {{contact_name}},\n\nI came across {{business_name}} and wanted to reach out with a quick idea.\n\nWe help clinics automate routine appointment inquiries, common questions, reminders, and follow-ups while keeping staff involved where personal attention is needed.\n\nThere may be a few repetitive parts of your current communication process that could be handled automatically.\n\nWould you be open to a quick conversation?\n\nBest,\nAlligentics\nalligentics.com",variables:["business_name","contact_name","city","service"]},
+  {id:"dental-appointments",business_type:"dental",name:"Dental · Appointment & inquiry handling",subject:"Quick idea for {{business_name}}",body:"Hi {{contact_name}},\n\nI came across {{business_name}} and wanted to reach out with a quick idea.\n\nDental practices often receive repeated questions, appointment requests, reminder requests, and follow-ups.\n\nWe help automate suitable parts of that communication so staff can spend less time on repetitive messages while keeping the patient experience personal.\n\nWould you be open to a quick conversation?\n\nBest,\nAlligentics\nalligentics.com",variables:["business_name","contact_name","city","service"]},
+  {id:"real-estate-leads",business_type:"real_estate",name:"Real estate · Lead response & follow-up",subject:"Quick idea for {{business_name}}",body:"Hi {{contact_name}},\n\nI came across {{business_name}} and wanted to reach out with a quick idea.\n\nReal estate teams often spend a lot of time responding to inquiries, qualifying leads, answering repeated questions, and following up with prospects.\n\nWe help automate suitable parts of that process so new inquiries can be handled consistently without replacing the human side of the sales process.\n\nWould you be open to a quick conversation?\n\nBest,\nAlligentics\nalligentics.com",variables:["business_name","contact_name","city","service"]},
+  {id:"auto-service",business_type:"auto_service",name:"Auto service · Booking & inquiries",subject:"Quick idea for {{business_name}}",body:"Hi {{contact_name}},\n\nI came across {{business_name}} and wanted to reach out with a quick idea.\n\nAuto service businesses often handle repeated questions, service requests, estimates, appointment requests, and follow-ups.\n\nWe help automate suitable parts of those workflows so customers can get faster responses while your team stays focused on the work.\n\nWould you be open to a quick conversation?\n\nBest,\nAlligentics\nalligentics.com",variables:["business_name","contact_name","city","service"]}
+];
+
+function getTemplates() {
+  return OUTREACH_TEMPLATES.map(t => ({...t, variables:t.variables.map(key => ({key,label:variableLabel(key)}))}));
+}
+
+function variableLabel(key) {
+  return ({business_name:'Business name',contact_name:'Contact name',city:'City',service:'Service / focus'})[key] || key;
+}
 
 function readSenders(env) {
   if (!env.SENDER_IDENTITIES) return {};
@@ -391,7 +414,7 @@ function renderApp() {
     .shell{max-width:1440px;margin:0 auto;padding:30px 22px 60px;overflow-x:hidden}.brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#04202b;font-weight:900}.tag{color:var(--muted);margin-top:3px}
     .grid{display:grid;grid-template-columns:minmax(340px,400px) minmax(0,1fr);gap:18px;align-items:start}.card{min-width:0;background:rgba(11,35,52,.94);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 16px 40px rgba(0,0,0,.18)}h1,h2{margin:0 0 12px}h1{font-size:24px}h2{font-size:18px}.full{grid-column:1/-1}
     label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}input,textarea,select,button{width:100%;min-width:0;font:inherit;border-radius:11px}input,textarea,select{background:#071d2a;color:var(--text);border:1px solid #25516a;padding:11px 12px;outline:none}textarea{resize:vertical;min-height:150px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}#message{min-height:280px}#reply{min-height:180px}input:focus,textarea:focus,select:focus{border-color:var(--accent)}button{border:0;padding:11px 14px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#03202a;font-weight:800;cursor:pointer}button.secondary{background:#102f42;color:var(--text);border:1px solid #29566c}.toolbar{display:flex;gap:10px;align-items:center;min-width:0}.toolbar h2{min-width:0}.toolbar button{width:auto;flex:0 0 auto}.status{font-size:13px;margin-top:10px;white-space:pre-wrap;color:var(--muted)}.error{color:var(--danger)}
-    .list{border-top:1px solid var(--line);margin-top:10px;min-width:0}.item{min-width:0;padding:14px 8px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:10px}.item:hover{background:#0d293c}.email{font-weight:800;overflow-wrap:anywhere}.subject{margin-top:5px;overflow-wrap:anywhere}.preview{color:var(--muted);font-size:13px;line-height:1.45;margin-top:6px;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}.badge{display:inline-block;font-size:11px;padding:3px 7px;border-radius:999px;background:#113a49;color:#bdf7ef;margin-left:6px;vertical-align:middle}.message{min-width:0;border:1px solid var(--line);background:#071d2a;border-radius:13px;padding:15px;margin:12px 0}.message.inbound{border-left:3px solid var(--accent2)}.message.outbound{border-left:3px solid var(--accent)}.message .meta{font-size:12px;color:var(--muted);margin-bottom:8px;overflow-wrap:anywhere}.message .body{white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere}.messageHead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}.messageRole{font-weight:800}.messageTime{font-size:11px;color:var(--muted);white-space:nowrap}.replyInline{width:auto;margin-top:12px;padding:7px 10px;font-size:12px;background:#102f42;color:var(--text);border:1px solid #29566c}.replyBox{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}.empty{color:var(--muted);padding:14px 0}.small{font-size:12px;color:var(--muted)}
+    .list{border-top:1px solid var(--line);margin-top:10px;min-width:0}.item{min-width:0;padding:14px 8px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:10px}.item:hover{background:#0d293c}.email{font-weight:800;overflow-wrap:anywhere}.subject{margin-top:5px;overflow-wrap:anywhere}.preview{color:var(--muted);font-size:13px;line-height:1.45;margin-top:6px;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}.badge{display:inline-block;font-size:11px;padding:3px 7px;border-radius:999px;background:#113a49;color:#bdf7ef;margin-left:6px;vertical-align:middle}.message{min-width:0;border:1px solid var(--line);background:#071d2a;border-radius:13px;padding:15px;margin:12px 0}.message.inbound{border-left:3px solid var(--accent2)}.message.outbound{border-left:3px solid var(--accent)}.message .meta{font-size:12px;color:var(--muted);margin-bottom:8px;overflow-wrap:anywhere}.message .body{white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere}.messageHead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}.messageRole{font-weight:800}.messageTime{font-size:11px;color:var(--muted);white-space:nowrap}.replyInline{width:auto;margin-top:12px;padding:7px 10px;font-size:12px;background:#102f42;color:var(--text);border:1px solid #29566c}.replyBox{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}.empty{color:var(--muted);padding:14px 0}.small{font-size:12px;color:var(--muted)}.templateGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.templateGrid .wide{grid-column:1/-1}.templateHint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:7px}.pill{display:inline-block;font-size:11px;padding:4px 8px;border-radius:999px;background:#113a49;color:#bdf7ef;margin:4px 4px 0 0}
     @media(max-width:900px){.shell{padding:22px 14px 48px}.grid{grid-template-columns:1fr}.full{grid-column:auto}#message{min-height:220px}.card[style*="position:sticky"]{position:static!important}}
   </style>
 </head>
@@ -403,11 +426,19 @@ function renderApp() {
       <section class="card" style="position:sticky;top:18px">
         <h2>Compose</h2>
         <label>Sender</label><select id="sender"></select>
+        <div class="templateGrid">
+          <div><label>Business type</label><select id="businessType"></select></div>
+          <div><label>Template</label><select id="template"></select></div>
+          <div><label>Business name</label><input id="businessName" placeholder="e.g. KFC" /></div>
+          <div><label>Contact name <span class="small">(optional)</span></label><input id="contactName" placeholder="e.g. Hassan" /></div>
+          <div><label>City <span class="small">(optional)</span></label><input id="city" placeholder="e.g. Islamabad" /></div>
+          <div><label>Service / focus <span class="small">(optional)</span></label><input id="service" placeholder="e.g. HVAC maintenance" /></div>
+          <div class="wide"><div class="templateHint">Templates use simple variables. Fill what you know and the email will be rendered automatically.</div><div id="variablePills"></div></div>
+        </div>
         <label>Customer email</label><input id="to" type="email" placeholder="name@company.com" />
         <label>Subject</label><input id="subject" placeholder="Quick question" />
-        <label>Message</label><textarea id="message" placeholder="Write your outreach message...&#10;&#10;Blank lines and paragraph spacing are preserved in the email."></textarea>
-        <div class="small" style="margin-top:7px">Tip: press Enter twice between paragraphs. Your spacing will be preserved in the delivered email.</div>
-        <div style="margin-top:12px"><button id="sendBtn">Send email</button></div>
+        <label>Message</label><textarea id="message" placeholder="Select a template to load the message..."></textarea>
+        <div class="small" style="margin-top:7px">Keep outreach concise and personalized. Inbox placement cannot be guaranteed by any template.</div>        <div style="margin-top:12px"><button id="sendBtn">Send email</button></div>
         <div id="sendStatus" class="status"></div>
       </section>
 
@@ -467,6 +498,44 @@ async function loadSenders() {
   }
 }
 
+let allTemplates = [];
+async function loadTemplates() {
+  try {
+    allTemplates = await api('/api/templates');
+    const types = [...new Map(allTemplates.map(t => [t.business_type, t])).values()];
+    $('businessType').innerHTML = types.map(t => '<option value="' + escapeHtml(t.business_type) + '">' + escapeHtml(formatBusinessType(t.business_type)) + '</option>').join('');
+    $('businessType').addEventListener('change', refreshTemplateChoices);
+    $('template').addEventListener('change', applySelectedTemplate);
+    ['businessName','contactName','city','service'].forEach(id => $(id).addEventListener('input', renderCurrentTemplate));
+    refreshTemplateChoices();
+  } catch (e) { $('businessType').innerHTML = '<option value="">Could not load templates</option>'; }
+}
+function refreshTemplateChoices() {
+  const matches = allTemplates.filter(t => t.business_type === $('businessType').value);
+  $('template').innerHTML = matches.map(t => '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.name) + '</option>').join('');
+  applySelectedTemplate();
+}
+function applySelectedTemplate() {
+  const t = allTemplates.find(x => x.id === $('template').value);
+  if (!t) return;
+  $('subject').value = renderText(t.subject);
+  $('message').value = renderText(t.body);
+  $('variablePills').innerHTML = (t.variables || []).map(v => '<span class="pill">{{' + escapeHtml(v.key) + '}}</span>').join('');
+}
+function renderCurrentTemplate() {
+  const t = allTemplates.find(x => x.id === $('template').value);
+  if (!t) return;
+  $('subject').value = renderText(t.subject);
+  $('message').value = renderText(t.body);
+}
+function renderText(value) {
+  const business = $('businessName').value.trim() || 'your business';
+  const contact = $('contactName').value.trim() || 'there';
+  const city = $('city').value.trim();
+  const service = $('service').value.trim() || 'your services';
+  return String(value || '').replace(/\{\{business_name\}\}/g,business).replace(/\{\{contact_name\}\}/g,contact).replace(/\{\{city\}\}/g,city).replace(/\{\{service\}\}/g,service).replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+function formatBusinessType(type) { return String(type || '').replace(/_/g,' ').replace(/\b\w/g,c => c.toUpperCase()); }
 async function sendMessage() {
   setStatus('sendStatus', 'Sending...');
   try {
@@ -563,6 +632,7 @@ function escapeHtml(value) {
 }
 
 loadSenders();
+loadTemplates();
 loadConversations();
 setInterval(loadConversations, 15000);
 setInterval(() => { if (currentConversationId && !$('threadCard').hidden) openConversation(currentConversationId); }, 15000);

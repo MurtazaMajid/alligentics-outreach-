@@ -991,6 +991,20 @@ async function sendViaMailgun(
     );
   }
 
+  if (payload.inReplyTo) {
+    form.set(
+      "h:In-Reply-To",
+      payload.inReplyTo
+    );
+  }
+
+  if (payload.references) {
+    form.set(
+      "h:References",
+      payload.references
+    );
+  }
+
   const authorization =
     "Basic " +
     btoa(

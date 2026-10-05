@@ -2992,83 +2992,145 @@ async function sendMessage() {
    CONVERSATIONS
    ========================================================= */
 
-async function loadConversations() {
+async function loadConversations(
+  options = {}
+) {
+  const silent =
+    options.silent === true;
 
-  $('conversations').innerHTML =
-    '<div class="empty">Loading...</div>';
-
+  if (
+    !silent &&
+    !conversationListSignature
+  ) {
+    $('conversations').innerHTML =
+      '<div class="empty">Loading...</div>';
+  }
 
   try {
-
     const rows =
-      await api(
-        '/api/conversations'
+      await api('/api/conversations');
+
+    const replyCount =
+      rows.filter(
+        conversation =>
+          Number(
+            conversation.reply_waiting || 0
+          ) > 0
+      ).length;
+
+    $('replySummary').textContent =
+      replyCount
+        ? replyCount +
+          (
+            replyCount === 1
+              ? ' customer reply needs attention'
+              : ' customer replies need attention'
+          )
+        : '';
+
+    $('replySummary').className =
+      replyCount
+        ? 'replySummary'
+        : 'replySummary empty';
+
+    const signature =
+      JSON.stringify(
+        rows.map(
+          conversation => ({
+            id: conversation.id,
+            updated_at:
+              conversation.updated_at,
+            last_message:
+              conversation.last_message,
+            last_direction:
+              conversation.last_direction,
+            reply_waiting:
+              conversation.reply_waiting
+          })
+        )
       );
 
-
-    if (!rows.length) {
-
-      $('conversations').innerHTML =
-        '<div class="empty">No conversations yet.</div>';
-
+    if (
+      signature ===
+      conversationListSignature
+    ) {
       return;
-
     }
 
+    conversationListSignature =
+      signature;
+
+    if (!rows.length) {
+      $('conversations').innerHTML =
+        '<div class="empty">No conversations yet.</div>';
+      return;
+    }
 
     $('conversations').innerHTML =
       rows
         .map(
-          conversation =>
+          conversation => {
+            const hasReply =
+              Number(
+                conversation.reply_waiting || 0
+              ) > 0;
 
-            '<div class="item" data-id="' +
-            conversation.id +
-            '">' +
+            const active =
+              Number(
+                conversation.id
+              ) ===
+              Number(
+                currentConversationId
+              );
 
-            '<div class="email">' +
+            return (
+              '<div class="item' +
+              (
+                hasReply
+                  ? ' hasReply'
+                  : ''
+              ) +
+              (
+                active
+                  ? ' active'
+                  : ''
+              ) +
+              '" data-id="' +
+              conversation.id +
+              '">' +
 
-            escapeHtml(
-              conversation.contact_email
-            ) +
+              '<div class="email">' +
+              escapeHtml(
+                conversation.contact_email
+              ) +
 
-            (
-              conversation.last_direction
+              (
+                hasReply
+                  ? '<span class="badge">New reply</span>'
+                  : ''
+              ) +
 
-                ? '<span class="badge">' +
-                  escapeHtml(
-                    conversation.last_direction
-                  ) +
-                  '</span>'
+              '</div>' +
 
-                : ''
-            ) +
+              '<div class="subject">' +
+              escapeHtml(
+                conversation.subject ||
+                '(no subject)'
+              ) +
+              '</div>' +
 
-            '</div>' +
+              '<div class="preview">' +
+              escapeHtml(
+                conversation.last_message ||
+                ''
+              ) +
+              '</div>' +
 
-
-            '<div class="subject">' +
-
-            escapeHtml(
-              conversation.subject ||
-              '(no subject)'
-            ) +
-
-            '</div>' +
-
-
-            '<div class="preview">' +
-
-            escapeHtml(
-              conversation.last_message ||
-              ''
-            ) +
-
-            '</div>' +
-
-            '</div>'
+              '</div>'
+            );
+          }
         )
         .join('');
-
 
     document
       .querySelectorAll(
@@ -3076,31 +3138,31 @@ async function loadConversations() {
       )
       .forEach(
         element => {
-
           element.addEventListener(
             'click',
             () =>
               openConversation(
                 Number(
                   element.dataset.id
-                )
+                ),
+                {
+                  silent: false,
+                  scrollIntoView: true
+                }
               )
           );
-
         }
       );
-
   } catch (error) {
-
-    $('conversations').innerHTML =
-      '<div class="empty error">' +
-      escapeHtml(
-        error.message
-      ) +
-      '</div>';
-
+    if (!silent) {
+      $('conversations').innerHTML =
+        '<div class="empty error">' +
+        escapeHtml(
+          error.message
+        ) +
+        '</div>';
+    }
   }
-
 }
 
 

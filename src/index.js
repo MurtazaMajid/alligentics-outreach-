@@ -3171,220 +3171,161 @@ async function loadConversations(
    ========================================================= */
 
 async function openConversation(
-  id
+  id,
+  options = {}
 ) {
+  const silent =
+    options.silent === true;
+
+  const shouldScroll =
+    options.scrollIntoView !== false;
 
   currentConversationId =
     id;
 
-
   $('threadCard').hidden =
     false;
 
-
-  $('thread').innerHTML =
-    '<div class="empty">Loading...</div>';
-
+  if (!silent) {
+    $('thread').innerHTML =
+      '<div class="empty">Loading...</div>';
+  }
 
   try {
-
     const data =
       await api(
         '/api/conversations/' +
         id
       );
 
-
     $('threadTitle').textContent =
-      data
-        .conversation
-        .contact_email;
-
+      data.conversation.contact_email;
 
     $('threadSubtitle').textContent =
       (
-        data
-          .conversation
-          .subject ||
+        data.conversation.subject ||
         '(no subject)'
       ) +
-
       ' · ' +
-
       data.messages.length +
-
       ' message' +
-
       (
         data.messages.length === 1
           ? ''
           : 's'
       );
 
+    const signature =
+      JSON.stringify(
+        data.messages.map(
+          message => ({
+            id: message.id,
+            direction: message.direction,
+            subject: message.subject,
+            body_text: message.body_text,
+            created_at: message.created_at
+          })
+        )
+      );
 
-    $('thread').innerHTML =
-      data.messages.length
+    if (
+      signature !==
+      currentThreadSignature
+    ) {
+      currentThreadSignature =
+        signature;
 
-        ? data.messages
-            .map(
-              message => {
+      $('thread').innerHTML =
+        data.messages.length
+          ? data.messages
+              .map(
+                message => {
+                  const inbound =
+                    message.direction ===
+                    'inbound';
 
-                const inbound =
-                  message.direction ===
-                  'inbound';
+                  const role =
+                    inbound
+                      ? 'Customer'
+                      : 'Alligentics';
 
+                  const replyButton =
+                    inbound
+                      ? '<button class="replyInline" data-reply-message="' +
+                        escapeHtml(message.id) +
+                        '">Reply to this</button>'
+                      : '';
 
-                const role =
-                  inbound
-                    ? 'Customer'
-                    : 'Alligentics';
-
-
-                const replyButton =
-                  inbound
-
-                    ? '<button class="replyInline" data-reply-message="' +
-                      escapeHtml(
-                        message.id
-                      ) +
-                      '">Reply to this</button>'
-
-                    : '';
-
-
-                return (
-
-                  '<div class="message ' +
-
-                  escapeHtml(
-                    message.direction
-                  ) +
-
-                  '">' +
-
-
-                  '<div class="messageHead">' +
-
-                  '<div class="messageRole">' +
-                  role +
-                  '</div>' +
-
-                  '<div class="messageTime">' +
-
-                  escapeHtml(
-                    message.created_at ||
-                    ''
-                  ) +
-
-                  '</div>' +
-
-                  '</div>' +
-
-
-                  '<div class="meta">' +
-
-                  escapeHtml(
-                    message.sender_email
-                  ) +
-
-                  ' → ' +
-
-                  escapeHtml(
-                    message.recipient_email
-                  ) +
-
-                  '</div>' +
-
-
-                  '<div>' +
-
-                  '<strong>' +
-
-                  escapeHtml(
-                    message.subject ||
-                    ''
-                  ) +
-
-                  '</strong>' +
-
-                  '</div>' +
-
-
-                  '<div class="body">' +
-
-                  escapeHtml(
-                    message.body_text ||
-                    ''
-                  ) +
-
-                  '</div>' +
-
-
-                  replyButton +
-
-                  '</div>'
-
-                );
-
-              }
-            )
-            .join('')
-
-        : '<div class="empty">No messages.</div>';
-
-
-    document
-      .querySelectorAll(
-        '.replyInline'
-      )
-      .forEach(
-        button => {
-
-          button.addEventListener(
-            'click',
-            () => {
-
-              $('reply').focus();
-
-              $('reply').scrollIntoView(
-                {
-                  behavior:
-                    'smooth',
-
-                  block:
-                    'center'
+                  return (
+                    '<div class="message ' +
+                    escapeHtml(message.direction) +
+                    '">' +
+                    '<div class="messageHead">' +
+                    '<div class="messageRole">' +
+                    role +
+                    '</div>' +
+                    '<div class="messageTime">' +
+                    escapeHtml(message.created_at || '') +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="meta">' +
+                    escapeHtml(message.sender_email) +
+                    ' → ' +
+                    escapeHtml(message.recipient_email) +
+                    '</div>' +
+                    '<div><strong>' +
+                    escapeHtml(message.subject || '') +
+                    '</strong></div>' +
+                    '<div class="body">' +
+                    escapeHtml(message.body_text || '') +
+                    '</div>' +
+                    replyButton +
+                    '</div>'
+                  );
                 }
-              );
+              )
+              .join('')
+          : '<div class="empty">No messages.</div>';
 
-            }
-          );
+      document
+        .querySelectorAll('.replyInline')
+        .forEach(
+          button => {
+            button.addEventListener(
+              'click',
+              () => {
+                $('reply').focus();
+                $('reply').scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center'
+                });
+              }
+            );
+          }
+        );
+    }
 
-        }
-      );
+    await loadConversations({
+      silent: true
+    });
 
-
-    $('threadCard')
-      .scrollIntoView(
-        {
-          behavior:
-            'smooth',
-
-          block:
-            'start'
-        }
-      );
-
+    if (
+      !silent &&
+      shouldScroll
+    ) {
+      $('threadCard').scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
   } catch (error) {
-
-    $('thread').innerHTML =
-      '<div class="empty error">' +
-      escapeHtml(
-        error.message
-      ) +
-      '</div>';
-
+    if (!silent) {
+      $('thread').innerHTML =
+        '<div class="empty error">' +
+        escapeHtml(error.message) +
+        '</div>';
+    }
   }
-
 }
 
 
@@ -3538,30 +3479,30 @@ loadTemplates();
 loadConversations();
 
 
-/* Refresh conversations every 15 seconds */
-
-setInterval(
-  loadConversations,
-  15000
-);
-
-
-/* Refresh currently open thread every 15 seconds */
+/* Quiet background refresh: never clear the visible list/thread or move the page. */
 
 setInterval(
   () => {
+    if (document.hidden) {
+      return;
+    }
+
+    loadConversations({
+      silent: true
+    });
 
     if (
       currentConversationId &&
       !$('threadCard').hidden
     ) {
-
       openConversation(
-        currentConversationId
+        currentConversationId,
+        {
+          silent: true,
+          scrollIntoView: false
+        }
       );
-
     }
-
   },
   15000
 );

@@ -1727,6 +1727,28 @@ function renderApp() {
       overflow-wrap:anywhere;
     }
 
+    .replySummary {
+      margin-top:8px;
+      color:#bdf7ef;
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .replySummary.empty {
+      display:none;
+    }
+
+    .item.hasReply {
+      background:rgba(67,229,194,.055);
+      border-left:3px solid var(--accent2);
+      padding-left:10px;
+    }
+
+    .item.active {
+      background:#0d293c;
+      outline:1px solid #245169;
+    }
+
     .badge {
       display:inline-block;
       font-size:11px;
@@ -2194,6 +2216,11 @@ function renderApp() {
             Full email threads, including customer replies.
           </div>
 
+          <div
+            id="replySummary"
+            class="replySummary"
+          ></div>
+
         </div>
 
 
@@ -2361,6 +2388,10 @@ const OWNERS = {
 let currentConversationId = null;
 
 let allTemplates = [];
+
+let conversationListSignature = "";
+
+let currentThreadSignature = "";
 
 
 const $ =

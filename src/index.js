@@ -479,12 +479,6 @@ async function sendNewMessage(
     );
   }
 
-  const threadHeaders =
-    await getConversationReplyHeaders(
-      env,
-      id
-    );
-
   const mailgun =
     await sendViaMailgun(
       env,
@@ -642,6 +636,12 @@ async function replyToConversation(
     makeReplySubject(
       conversation.subject ||
       "Your message"
+    );
+
+  const threadHeaders =
+    await getConversationReplyHeaders(
+      env,
+      id
     );
 
   const mailgun =

@@ -3106,7 +3106,7 @@ async function loadConversations(
 
               (
                 hasReply
-                  ? '<span class="badge">New reply</span>'
+                  ? '<span class="badge">Customer replied</span>'
                   : ''
               ) +
 

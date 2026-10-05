@@ -2000,8 +2000,8 @@ function renderApp() {
           Murtaza — CTO & Co-Founder
         </option>
 
-        <option value="omar">
-          Omar — CEO & Co-Founder
+        <option value="omer">
+          Omer — CEO & Co-Founder
         </option>
 
         <option value="hassan">
@@ -2368,8 +2368,8 @@ const OWNERS = {
     position: "CTO & Co-Founder"
   },
 
-  omar: {
-    name: "Omar",
+  omer: {
+    name: "Omer",
     position: "CEO & Co-Founder"
   },
 

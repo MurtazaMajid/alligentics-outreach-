@@ -479,6 +479,12 @@ async function sendNewMessage(
     );
   }
 
+  const threadHeaders =
+    await getConversationReplyHeaders(
+      env,
+      id
+    );
+
   const mailgun =
     await sendViaMailgun(
       env,
@@ -548,6 +554,34 @@ async function sendNewMessage(
 /* =========================================================
    REPLY
    ========================================================= */
+
+async function getConversationReplyHeaders(
+  env,
+  conversationId
+) {
+  const result =
+    await env.DB.prepare(
+      `SELECT mailgun_message_id
+       FROM messages
+       WHERE conversation_id = ?
+         AND mailgun_message_id IS NOT NULL
+         AND mailgun_message_id <> ''
+       ORDER BY id ASC`
+    )
+      .bind(conversationId)
+      .all();
+
+  const ids =
+    (result.results || [])
+      .map(row => String(row.mailgun_message_id || "").trim())
+      .filter(Boolean);
+
+  return {
+    inReplyTo: ids.length ? ids[ids.length - 1] : null,
+    references: ids.join(" ")
+  };
+}
+
 
 async function replyToConversation(
   id,
@@ -628,7 +662,11 @@ async function replyToConversation(
         html:
           textToEmailHtml(
             message
-          )
+          ),
+        inReplyTo:
+          threadHeaders.inReplyTo,
+        references:
+          threadHeaders.references
       }
     );
 
@@ -739,6 +777,21 @@ async function handleInbound(
     ).trim() ||
     null;
 
+  const inReplyTo =
+    String(
+      form.get("In-Reply-To") ||
+      form.get("in-reply-to") ||
+      ""
+    ).trim() ||
+    null;
+
+  const references =
+    String(
+      form.get("References") ||
+      form.get("references") ||
+      ""
+    ).trim();
+
   if (!sender) {
     return json(
       {
@@ -749,12 +802,38 @@ async function handleInbound(
     );
   }
 
-  const conversationId =
-    await upsertConversation(
-      env,
-      sender,
-      subject
-    );
+  const threadMessageIds = [
+    ...(inReplyTo ? [inReplyTo] : []),
+    ...references.split(/\s+/).map(value => value.trim()).filter(Boolean)
+  ];
+
+  let conversationId = null;
+
+  for (const messageIdCandidate of threadMessageIds) {
+    const match =
+      await env.DB.prepare(
+        `SELECT conversation_id
+         FROM messages
+         WHERE mailgun_message_id = ?
+         LIMIT 1`
+      )
+        .bind(messageIdCandidate)
+        .first();
+
+    if (match) {
+      conversationId = Number(match.conversation_id);
+      break;
+    }
+  }
+
+  if (!conversationId) {
+    conversationId =
+      await upsertConversation(
+        env,
+        sender,
+        subject
+      );
+  }
 
   try {
     await insertMessage(
@@ -1163,7 +1242,18 @@ async function listConversations(
          WHERE m.conversation_id = c.id
          ORDER BY m.id DESC
          LIMIT 1
-       ) AS last_direction
+       ) AS last_direction,
+       (
+         SELECT COUNT(*)
+         FROM messages m
+         WHERE m.conversation_id = c.id
+           AND m.direction = 'inbound'
+           AND m.id = (
+             SELECT MAX(m2.id)
+             FROM messages m2
+             WHERE m2.conversation_id = c.id
+           )
+       ) AS reply_waiting
        FROM conversations c
        ORDER BY datetime(c.updated_at) DESC,
                 c.id DESC`

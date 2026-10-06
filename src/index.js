@@ -433,7 +433,7 @@ async function sendNewMessage(
   env
 ) {
   const payload =
-    await readJson(request);
+    await readPayload(request);
 
   const sender =
     readSenders(env)[
@@ -496,7 +496,10 @@ async function sendNewMessage(
         html:
           textToEmailHtml(
             message
-          )
+          ),
+
+        attachments:
+          payload.attachments || []
       }
     );
 
@@ -666,7 +669,10 @@ async function replyToConversation(
         inReplyTo:
           threadHeaders.inReplyTo,
         references:
-          threadHeaders.references
+          threadHeaders.references,
+
+        attachments:
+          payload.attachments || []
       }
     );
 
@@ -1084,6 +1090,18 @@ async function sendViaMailgun(
     );
   }
 
+  for (const attachment of payload.attachments || []) {
+    if (!(attachment instanceof File)) {
+      continue;
+    }
+
+    form.append(
+      "attachment",
+      attachment,
+      attachment.name
+    );
+  }
+
   const authorization =
     "Basic " +
     btoa(
@@ -1398,11 +1416,64 @@ function makeReplySubject(
 }
 
 
-async function readJson(
+async function readPayload(
   request
 ) {
+  const contentType =
+    String(
+      request.headers.get("content-type") || ""
+    ).toLowerCase();
+
+  if (contentType.includes("multipart/form-data")) {
+    const form =
+      await request.formData();
+
+    const attachments =
+      form
+        .getAll("attachments")
+        .filter(
+          value => value instanceof File
+        );
+
+    const totalBytes =
+      attachments.reduce(
+        (sum, file) =>
+          sum + Number(file.size || 0),
+        0
+      );
+
+    if (attachments.length > 10) {
+      throw new Error(
+        "You can attach up to 10 files per email."
+      );
+    }
+
+    if (attachments.some(file => Number(file.size || 0) > 10 * 1024 * 1024)) {
+      throw new Error(
+        "Each attachment must be 10 MB or smaller."
+      );
+    }
+
+    if (totalBytes > 20 * 1024 * 1024) {
+      throw new Error(
+        "Attachments are too large. Please keep the total size under 20 MB."
+      );
+    }
+
+    return {
+      sender_id: String(form.get("sender_id") || "").trim(),
+      to: String(form.get("to") || "").trim(),
+      subject: String(form.get("subject") || "").trim(),
+      message: String(form.get("message") || "").trim(),
+      attachments
+    };
+  }
+
   try {
-    return await request.json();
+    return {
+      ...(await request.json()),
+      attachments: []
+    };
   } catch {
     throw new Error(
       "Request body must be valid JSON"
@@ -1903,6 +1974,57 @@ function renderApp() {
       color:var(--text);
     }
 
+    .attachmentRow {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .attachmentButton {
+      width:auto;
+      padding:8px 11px;
+      font-size:12px;
+    }
+
+    .attachmentList {
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px;
+      margin-top:9px;
+    }
+
+    .attachmentItem {
+      display:flex;
+      align-items:center;
+      gap:7px;
+      max-width:100%;
+      padding:6px 8px;
+      border:1px solid #245169;
+      border-radius:8px;
+      background:#071d2a;
+      font-size:12px;
+      color:#cfe6ef;
+    }
+
+    .attachmentName {
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      max-width:260px;
+    }
+
+    .attachmentRemove {
+      width:auto;
+      margin:0;
+      padding:2px 6px;
+      background:transparent;
+      color:var(--muted);
+      border:0;
+      font-size:14px;
+    }
+
     @media(max-width:900px) {
 
       .shell {
@@ -2165,6 +2287,12 @@ function renderApp() {
         placeholder="Select a template to load the message..."
       ></textarea>
 
+      <div class="attachmentRow">
+        <input id="composeAttachments" type="file" multiple hidden />
+        <button type="button" class="secondary attachmentButton" id="composeAttachBtn">📎 Attach files</button>
+        <span class="small">Up to 10 files, 20 MB total</span>
+      </div>
+      <div id="composeAttachmentList" class="attachmentList"></div>
 
       <div
         class="small"
@@ -2312,6 +2440,12 @@ function renderApp() {
           placeholder="Write your reply..."
         ></textarea>
 
+        <div class="attachmentRow">
+          <input id="replyAttachments" type="file" multiple hidden />
+          <button type="button" class="secondary attachmentButton" id="replyAttachBtn">📎 Attach files</button>
+          <span class="small">Up to 10 files, 20 MB total</span>
+        </div>
+        <div id="replyAttachmentList" class="attachmentList"></div>
 
         <div
           class="toolbar"
@@ -2393,6 +2527,9 @@ let conversationListSignature = "";
 
 let currentThreadSignature = "";
 
+let composeAttachments = [];
+let replyAttachments = [];
+
 
 const $ =
   id =>
@@ -2421,14 +2558,22 @@ $('replyClearBtn')
   .addEventListener(
     'click',
     () => {
-
       $('reply').value = '';
-
+      clearAttachments('reply');
       $('replyStatus').textContent = '';
-
     }
   );
 
+$('composeAttachBtn').addEventListener('click', () => $('composeAttachments').click());
+$('composeAttachments').addEventListener('change', event => {
+  addSelectedAttachments('compose', event.target.files);
+  event.target.value = '';
+});
+$('replyAttachBtn').addEventListener('click', () => $('replyAttachments').click());
+$('replyAttachments').addEventListener('change', event => {
+  addSelectedAttachments('reply', event.target.files);
+  event.target.value = '';
+});
 
 $('refreshBtn')
   .addEventListener(
@@ -2931,30 +3076,20 @@ async function sendMessage() {
         {
           method: 'POST',
 
-          headers: {
-            'content-type':
-              'application/json'
-          },
-
-          body:
-            JSON.stringify(
-              {
-                sender_id:
-                  $('sender').value,
-
-                to:
-                  $('to').value,
-
-                subject:
-                  $('subject').value,
-
-                message:
-                  $('message').value
-              }
-            )
+          body: (() => {
+            const form = new FormData();
+            form.set('sender_id', $('sender').value);
+            form.set('to', $('to').value);
+            form.set('subject', $('subject').value);
+            form.set('message', $('message').value);
+            composeAttachments.forEach(file => form.append('attachments', file, file.name));
+            return form;
+          })()
         }
       );
 
+
+    clearAttachments('compose');
 
     setStatus(
       'sendStatus',
@@ -3357,27 +3492,21 @@ async function sendReply() {
       {
         method: 'POST',
 
-        headers: {
-          'content-type':
-            'application/json'
-        },
-
-        body:
-          JSON.stringify(
-            {
-              sender_id:
-                $('sender').value,
-
-              message:
-                $('reply').value
-            }
-          )
+        body: (() => {
+          const form = new FormData();
+          form.set('sender_id', $('sender').value);
+          form.set('message', $('reply').value);
+          replyAttachments.forEach(file => form.append('attachments', file, file.name));
+          return form;
+        })()
       }
     );
 
 
     $('reply').value =
       '';
+
+    clearAttachments('reply');
 
 
     setStatus(
@@ -3405,6 +3534,54 @@ async function sendReply() {
 
 }
 
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (value < 1024) return value + ' B';
+  if (value < 1024 * 1024) return (value / 1024).toFixed(1) + ' KB';
+  return (value / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function addSelectedAttachments(type, files) {
+  const target = type === 'compose' ? composeAttachments : replyAttachments;
+  const combined = target.concat(Array.from(files || []));
+  const unique = [];
+  for (const file of combined) {
+    if (!unique.some(existing => existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified)) {
+      unique.push(file);
+    }
+  }
+  const statusId = type === 'compose' ? 'sendStatus' : 'replyStatus';
+  if (unique.length > 10) return setStatus(statusId, 'You can attach up to 10 files.', true);
+  if (unique.some(file => file.size > 10 * 1024 * 1024)) return setStatus(statusId, 'Each attachment must be 10 MB or smaller.', true);
+  if (unique.reduce((sum, file) => sum + file.size, 0) > 20 * 1024 * 1024) return setStatus(statusId, 'Attachments must be 20 MB or smaller in total.', true);
+  if (type === 'compose') composeAttachments = unique;
+  else replyAttachments = unique;
+  renderAttachmentList(type);
+}
+
+function removeAttachment(type, index) {
+  const target = type === 'compose' ? composeAttachments : replyAttachments;
+  target.splice(index, 1);
+  renderAttachmentList(type);
+}
+
+function clearAttachments(type) {
+  if (type === 'compose') composeAttachments = [];
+  else replyAttachments = [];
+  renderAttachmentList(type);
+}
+
+function renderAttachmentList(type) {
+  const target = type === 'compose' ? composeAttachments : replyAttachments;
+  const element = $(type === 'compose' ? 'composeAttachmentList' : 'replyAttachmentList');
+  element.innerHTML = target.map((file, index) =>
+    '<div class="attachmentItem"><span class="attachmentName">' + escapeHtml(file.name) + ' · ' + formatBytes(file.size) + '</span><button type="button" class="attachmentRemove" data-attachment-type="' + type + '" data-attachment-index="' + index + '">×</button></div>'
+  ).join('');
+  element.querySelectorAll('[data-attachment-type]').forEach(button => {
+    button.addEventListener('click', () => removeAttachment(button.dataset.attachmentType, Number(button.dataset.attachmentIndex)));
+  });
+}
 
 /* =========================================================
    UI HELPERS
